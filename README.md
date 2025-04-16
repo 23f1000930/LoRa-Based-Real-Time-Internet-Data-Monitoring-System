@@ -1,8 +1,8 @@
 # LoRa-Based-Real-Time-Internet-Data-Monitoring-System
 
-# ActualDataRecieverLoRa.ino : this file is used by reciever module(NodeMCU, ESP8266)
-# ActualDataSenderLoRa.ino : this file is used by sender module (ESP32)
-# index.html : used for viewing of realtime data from LoRa
+ActualDataRecieverLoRa.ino : this file is used by reciever module(NodeMCU, ESP8266)
+ActualDataSenderLoRa.ino : this file is used by sender module (ESP32)
+index.html : used for viewing of realtime data from LoRa
 ---
 
 ## 📌 **1. Abstract & Objective**
