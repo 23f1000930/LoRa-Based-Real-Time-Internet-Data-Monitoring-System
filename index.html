@@ -1,0 +1,177 @@
+<html>
+
+<head>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <title>LoRa Data Viewer</title>
+    <center>
+        <h1 style="color: #2C3E50;">LoRa Data Viewer</h1>
+        <h2 style="color: #EE5A24;">Monitor Realtime Data</h2>
+    </center>
+</head>
+<hr color="#d63031" width="50%" align="middle">
+<style>
+    body {
+        background-color: #ffda79;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        padding: 20px;
+    }
+
+    .data-container {
+        margin-top: 20px;
+        padding: 20px;
+        background-color: #ffffff;
+        border-radius: 10px;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+        font-size: 20px;
+        color: #2d3436;
+        display: inline-block;
+    }
+</style>
+
+<body>
+    <div id="data-container" class="data-container">
+        <p>Loading data...</p>
+    </div>
+    <center><h1>Graphical Real-Time Monitoring</h1></center>
+    <div id="Soil_Moisture_Graph" style="width:100%; height:60%;"></div>
+    <div id="Env_Temperature_Graph" style="width:100%; height:60%;"></div>
+    <div id="Env_Humidity_Graph" style="width:100%; height:60%;"></div>
+    <div id="Rain_Intensity_Graph" style="width:100%; height:60%;"></div>
+    <div id="Flammable_Gas_Intensity_Graph" style="width:100%; height:60%;"></div>
+    <div id="Sound_Intensity_Graph" style="width:100%; height:60%;"></div>
+</body>
+
+</html>
+<script>
+    // Firebase configuration
+    const DATABASE_URL = "https://temppicow-default-rtdb.asia-southeast1.firebasedatabase.app/"; // Replace with your Firebase Realtime Database URL
+    const FIREBASE_AUTH = "0avkBIfd68SUtRzaf7uilKqRAu2JpqeYhAZIM4Jn"; // Optional for basic security
+
+    let lastFetchedKey = null; // To store the last fetched key
+
+    // Function to retrieve data from Firebase
+    async function retrieveData() {
+        const dateKey = getFormattedDate(); // Fetch only the date (dd-MMM-yyyy)
+        const path = `SensorData/Node1/${dateKey}`; // Correct Firebase database path
+        const url = `${DATABASE_URL}${path}.json${FIREBASE_AUTH ? `?auth=${FIREBASE_AUTH}` : ''}`;
+
+        try {
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                const lastKey = Object.keys(data).pop(); // Get the last key
+                const lastValue = data[lastKey]; // Get the corresponding value for the last key
+
+                // Check if the last key has changed
+                if (lastKey !== lastFetchedKey) {
+                    lastFetchedKey = lastKey; // Update the last fetched key
+                    console.log("New data detected:", { dateKey, lastKey, lastValue });
+                    displayData(dateKey, lastKey, lastValue); // Update the webpage dynamically
+
+                    const timestamp = (new Date()).getTime();
+
+                    updateGraph(chartSoilMoisture, timestamp, parseFloat(lastValue.Soil_Moisture));
+                    updateGraph(chartEnvTemperature, timestamp, parseFloat(lastValue.Env_Temperature));
+                    updateGraph(chartEnvHumidity, timestamp, parseFloat(lastValue.Env_Humidity));
+                    updateGraph(chartRainIntensity, timestamp, parseFloat(lastValue.Rain_Intensity));
+                    updateGraph(chartFlammableGasIntensity, timestamp, parseFloat(lastValue.Flammable_Gas_Intensity));
+                    updateGraph(chartSoundIntensity, timestamp, parseFloat(lastValue.Sound_Intensity));
+                } else {
+                    console.log("No new data detected.");
+                }
+            } else {
+                console.error("Failed to retrieve data:", response.status, response.statusText);
+            }
+        } catch (error) {
+            console.error("Error retrieving data:", error);
+        }
+    }
+
+    // Function to update graph data
+    function updateGraph(chart, x, y) {
+        if (!isNaN(y)) {
+            const shift = chart.series[0].data.length >= 40; // Shift data if more than 40 points
+            chart.series[0].addPoint([x, y], true, shift);
+        }
+    }
+
+    // Function to display data on the webpage
+    function displayData(dKey, lKey, data) {
+        const dataContainer = document.getElementById("data-container");
+        dataContainer.innerHTML = `
+                <p><strong>Date:</strong> ${dKey}</p>
+                <p><strong>Last Key:</strong> ${lKey}</p>
+                <p><strong>Last Value:</strong> <pre>${JSON.stringify(data, null, 2)}</pre></p>
+            `;
+    }
+
+    // Function to fetch the current date in the required format (dd-MMM-yyyy)
+    function getFormattedDate() {
+        const date = new Date();
+
+        // Get date components
+        const day = date.getDate().toString().padStart(2, '0'); // Day with leading zero
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const month = monthNames[date.getMonth()]; // Month as a short name
+        const year = date.getFullYear(); // Full year
+
+        // Format: dd-MMM-yyyy
+        return `${day}-${month}-${year}`;
+    }
+
+    // Fetch data every 20 seconds
+    window.onload = () => {
+        retrieveData(); // Initial call
+        setInterval(retrieveData, 20000); // Fetch every 20 seconds
+    };
+
+    // Create charts for each graph
+    const chartSoilMoisture = Highcharts.chart('Soil_Moisture_Graph', {
+        chart: { type: 'line' },
+        title: { text: 'Soil Moisture' },
+        xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+        yAxis: { title: { text: 'Moisture (%)' } },
+        series: [{ name: "Soil Moisture", data: [] }]
+    });
+
+    const chartEnvTemperature = Highcharts.chart('Env_Temperature_Graph', {
+        chart: { type: 'line' },
+        title: { text: 'Environment Temperature' },
+        xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+        yAxis: { title: { text: 'Temperature (°C)' } },
+        series: [{ name: "Environment Temperature", data: [] }]
+    });
+
+    const chartEnvHumidity = Highcharts.chart('Env_Humidity_Graph', {
+        chart: { type: 'line' },
+        title: { text: 'Environment Humidity' },
+        xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+        yAxis: { title: { text: 'Humidity (%)' } },
+        series: [{ name: "Environment Humidity", data: [] }]
+    });
+
+    const chartRainIntensity = Highcharts.chart('Rain_Intensity_Graph', {
+        chart: { type: 'line' },
+        title: { text: 'Rain Intensity' },
+        xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+        yAxis: { title: { text: 'Intensity (%)' } },
+        series: [{ name: "Rain Intensity", data: [] }]
+    });
+
+    const chartFlammableGasIntensity = Highcharts.chart('Flammable_Gas_Intensity_Graph', {
+        chart: { type: 'line' },
+        title: { text: 'Flammable Gas Intensity' },
+        xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+        yAxis: { title: { text: 'Intensity (PPM)' } },
+        series: [{ name: "Flammable Gas Intensity", data: [] }]
+    });
+
+    const chartSoundIntensity = Highcharts.chart('Sound_Intensity_Graph', {
+        chart: { type: 'line' },
+        title: { text: 'Sound Intensity' },
+        xAxis: { type: 'datetime', dateTimeLabelFormats: { second: '%H:%M:%S' } },
+        yAxis: { title: { text: 'Intensity (dB)' } },
+        series: [{ name: "Sound Intensity", data: [] }]
+    });
+</script>
