@@ -151,10 +151,3 @@ Includes links to:
   - STEMpedia
 
 ---
-
-Would you like:
-- A PowerPoint based on this overview?
-- Code walkthrough of how LoRa + Firebase + Web App are integrated?
-- A Viva Q&A cheat sheet based on this report?
-
-Let me know how you'd like to proceed!
